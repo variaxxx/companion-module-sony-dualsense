@@ -1,5 +1,5 @@
 {
-	"name": "@companion-module/gamepad",
+	"name": "@companion-module/sony-dualsense",
 	"version": "1.0.0",
 	"main": "dist/main.js",
 	"type": "module",
@@ -16,7 +16,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/bitfocus/companion-module-your-module-name.git"
+		"url": "git+https://github.com/variaxxx/companion-module-sony-dualsense.git"
 	},
 	"engines": {
 		"node": "^22.14",

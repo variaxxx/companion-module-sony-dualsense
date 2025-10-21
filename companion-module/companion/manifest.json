@@ -1,12 +1,12 @@
 {
-	"id": "@companion-module/gamepad",
-	"name": "Gamepad",
-	"shortname": "gamepad",
-	"description": "Gamepad module",
+	"id": "@companion-module/sony-dualsense",
+	"name": "Sony DualSense",
+	"shortname": "dualsense",
+	"description": "Module for Sony DualSense gamepad",
 	"version": "1.0.0",
 	"license": "MIT",
-	"repository": "git+https://github.com/variaxxx/gamepad-companion-module.git",
-	"bugs": "https://github.com/variaxxx/gamepad-companion-module/issues",
+	"repository": "git+https://github.com/variaxxx/companion-module-sony-dualsense.git",
+	"bugs": "https://github.com/variaxxx/companion-module-sony-dualsense/issues",
 	"maintainers": [
 		{
 			"name": "variaxxx",

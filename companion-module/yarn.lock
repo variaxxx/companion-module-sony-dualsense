@@ -22,9 +22,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@companion-module/gamepad@workspace:.":
+"@companion-module/sony-dualsense@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@companion-module/gamepad@workspace:."
+  resolution: "@companion-module/sony-dualsense@workspace:."
   dependencies:
     "@companion-module/base": "npm:~1.12.1"
     "@companion-module/tools": "npm:^2.3.0"
