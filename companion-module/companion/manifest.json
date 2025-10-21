@@ -1,0 +1,26 @@
+{
+	"id": "@companion-module/gamepad",
+	"name": "Gamepad",
+	"shortname": "gamepad",
+	"description": "Gamepad module",
+	"version": "1.0.0",
+	"license": "MIT",
+	"repository": "git+https://github.com/variaxxx/gamepad-companion-module.git",
+	"bugs": "https://github.com/variaxxx/gamepad-companion-module/issues",
+	"maintainers": [
+		{
+			"name": "variaxxx",
+			"email": "variaxxx@ya.ru"
+		}
+	],
+	"runtime": {
+		"type": "node22",
+		"api": "nodejs-ipc",
+		"apiVersion": "0.0.0",
+		"entrypoint": "../dist/main.js"
+	},
+	"legacyIds": [],
+	"manufacturer": "Sony",
+	"products": ["DualSense"],
+	"keywords": []
+}
