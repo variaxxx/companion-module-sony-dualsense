@@ -1,11 +1,26 @@
 import { DualsenseButton, DualsenseButtons } from "./buttons.js";
+import { logger } from "./logger.js";
 import { Dualsense } from "dualsense-ts";
 import { WebSocket } from "ws";
 
+export interface IncomingMessage {
+  code: number;
+  type: "error" | "message";
+  message: string;
+}
+
+export interface OutgoingMessage {
+  code: number;
+  type: "error" | "message" | "buttonPress";
+  message: string;
+}
+
 export class DualsenseBridge {
   private ws!: WebSocket;
-  private wsPath: string;
   private dualsense!: Dualsense;
+
+  private wsPath: string;
+  private retryDelay: number = 1000;
 
   constructor(wsPath: string) {
     this.wsPath = wsPath;
@@ -15,18 +30,48 @@ export class DualsenseBridge {
   }
 
   private setupWs(): void {
+    try {
+      this.ws.removeAllListeners();
+      this.ws.terminate();
+    } catch {}
+
     this.ws = new WebSocket(this.wsPath);
 
     this.ws.on("open", () => {
-      console.log("WebSocket connected");
-      this.ws.send("Connection established");
+      this.sendMessage({
+        code: 200,
+        type: "message",
+        message: "Connection established",
+      });
     });
 
-    this.ws.on("error", err => console.error(err));
+    this.ws.on("message", (data) => {
+      const obj: IncomingMessage = JSON.parse(data.toString());
+
+      if (obj.type === "message") {
+        logger.info(`Received message: ${obj.message}`);
+      } else if (obj.type === "error") {
+        if (obj.code === 401) {
+          logger.error("Wrong token provided, edit environment and try again");
+          process.exit(1);
+        } else {
+          logger.error(`Received error: ${obj.message}`);
+        }
+      }
+    });
+
+    this.ws.on("error", (err: any) => {
+      if (err.code !== "ECONNREFUSED") {
+        logger.error(err);
+      }
+    });
 
     this.ws.on("close", () => {
-      console.log("WebSocket closed");
-      setTimeout(() => this.setupWs(), 1000);
+      logger.error(`WebSocket connection closed, reconnecting in ${this.retryDelay / 1000}s...`);
+      setTimeout(() => {
+        this.setupWs();
+        this.retryDelay = Math.min(this.retryDelay * 2, 10000);
+      }, this.retryDelay);
     });
   }
 
@@ -34,50 +79,53 @@ export class DualsenseBridge {
     this.dualsense = new Dualsense();
 
     this.dualsense.connection.on("change", ({ active }) => {
-      console.log(`Controller ${active ? "" : "dis"}connected`);
+      logger.info(`Controller ${active ? "" : "dis"}connected`);
     });
 
     for (const mainButton of Object.values(DualsenseButtons.Main) as DualsenseButton[]) {
-      // @ts-expect-error (чтоб итерироваться)
-      this.dualsense[mainButton].on("press", () => this.handleButtonPress(mainButton));
+      (this.dualsense as any)[mainButton].on("press", () => this.handleButtonPress(mainButton));
     }
 
     for (const dpadButton of Object.values(DualsenseButtons.DPad) as DualsenseButton[]) {
       const direction = dpadButton.split("_")[1];
-      // @ts-expect-error (чтоб итерироваться)
-      this.dualsense.dpad[direction].on("press", () => this.handleButtonPress(dpadButton));
+      (this.dualsense.dpad as any)[direction].on("press", () => this.handleButtonPress(dpadButton));
     }
 
     for (const systemButton of Object.values(DualsenseButtons.System) as DualsenseButton[]) {
-      // @ts-expect-error (чтоб итерироваться)
-      this.dualsense[systemButton].on("press", () => this.handleButtonPress(systemButton));
+      (this.dualsense as any)[systemButton].on("press", () => this.handleButtonPress(systemButton));
     }
 
     for (const side of ["left", "right"]) {
-      // @ts-expect-error (чтоб итерироваться)
-      this.dualsense[side].bumper.on("press", () => {
-        if (side === "left")
-          return this.handleButtonPress(DualsenseButtons.Triggers.L1);
-        return this.handleButtonPress(DualsenseButtons.Triggers.R1);
-      });
+      (this.dualsense as any)[side].bumper.on("press", () => this.handleButtonPress(
+        side === "left"
+          ? DualsenseButtons.Triggers.L1
+          : DualsenseButtons.Triggers.R1,
+      ));
 
-      // @ts-expect-error (чтоб итерироваться)
-      this.dualsense[side].trigger.on("press", () => {
-        if (side === "left")
-          return this.handleButtonPress(DualsenseButtons.Triggers.L2);
-        return this.handleButtonPress(DualsenseButtons.Triggers.R2);
-      });
+      (this.dualsense as any)[side].trigger.on("press", () => this.handleButtonPress(
+        side === "left"
+          ? DualsenseButtons.Triggers.L2
+          : DualsenseButtons.Triggers.R2,
+      ));
 
-      this.dualsense.left.analog.on("press", () => console.log("l3"));
+      // this.dualsense.left.analog.on("press", () => console.log("l3"));
     }
   }
 
   private handleButtonPress(button: DualsenseButton): void {
-    console.log(`Pressed ${button}`);
-    if (this.ws.readyState === this.ws.OPEN) {
-      this.ws.send(button);
+    logger.info(`Pressed: ${button}`);
+    if (this.ws.readyState === WebSocket.OPEN) {
+      this.sendMessage({
+        code: 200,
+        type: "buttonPress",
+        message: button,
+      });
     } else {
-      console.warn("WebSocket connection is closed!");
+      logger.warn("WebSocket connection is closed");
     }
+  }
+
+  private sendMessage(message: OutgoingMessage): void {
+    this.ws.send(JSON.stringify(message));
   }
 }

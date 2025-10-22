@@ -2,6 +2,7 @@ import { type SomeCompanionConfigField } from '@companion-module/base'
 
 export interface ModuleConfig {
 	wsPort: number
+	wsSecret: string
 }
 
 export function GetConfigFields(): SomeCompanionConfigField[] {
@@ -14,6 +15,13 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			min: 1,
 			max: 65535,
 			default: 8181,
+		},
+		{
+			type: 'textinput',
+			id: 'wsSecret',
+			label: 'Secret for WebSocket access',
+			width: 6,
+			default: 'secret',
 		},
 	]
 }

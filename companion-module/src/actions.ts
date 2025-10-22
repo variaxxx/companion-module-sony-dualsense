@@ -1,4 +1,5 @@
 import { DualsenseButtons } from './dualsense.js'
+import { logger } from './logger.js'
 import type { ModuleInstance } from './main.js'
 import { ModuleVariable } from './variables.js'
 
@@ -20,7 +21,7 @@ export function UpdateActions(self: ModuleInstance): void {
 			],
 			callback: async (event) => {
 				if (event.options.button === self.getVariableValue(ModuleVariable.PressedKey))
-					console.log(`Something was triggered by ${event.options.button}`)
+					logger.info(`Something was triggered by ${event.options.button}`)
 			},
 		},
 	})

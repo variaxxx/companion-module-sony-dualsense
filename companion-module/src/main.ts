@@ -5,6 +5,7 @@ import { UpgradeScripts } from './upgrades.js'
 import { UpdateActions } from './actions.js'
 import { UpdateFeedbacks } from './feedbacks.js'
 import { SetupDualsenseWs } from './dualsense.js'
+import { logger } from './logger.js'
 
 export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	config!: ModuleConfig // Setup in init()
@@ -16,7 +17,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	async init(config: ModuleConfig): Promise<void> {
 		this.config = config
 
-		console.log('module init...')
+		logger.info('module init...')
 
 		this.setupDualsenseWs()
 

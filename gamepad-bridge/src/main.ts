@@ -4,10 +4,11 @@ export function bootstrap(): DualsenseBridge {
   process.loadEnvFile();
   const host = process.env.WS_HOST;
   const port = process.env.WS_PORT;
-  if (!host || !port)
-    throw new Error("WebSocket host or port is not configured");
+  const secret = process.env.WS_SECRET;
+  if (!host || !port || !secret)
+    throw new Error("WebSocket host, port or secret is not configured");
 
-  return new DualsenseBridge(`ws://${host}:${port}/`);
+  return new DualsenseBridge(`ws://${host}:${port}/?token=${secret}`);
 }
 
 bootstrap();
