@@ -25,10 +25,22 @@ export const DualsenseButtons = [
 	'mute',
 ] as const
 
-export interface Message {
+export interface OutgoingMessage {
 	code: number
-	type: 'error' | 'buttonPress' | 'message'
+	type: 'error' | 'message'
 	message: string
+}
+
+export interface IncomingMessage {
+	code: number
+	type: 'error' | 'message' | 'button'
+	message?: string
+	data?: {
+		button: (typeof DualsenseButtons)[number]
+		x?: number
+		y?: number
+		direction?: number
+	}
 }
 
 export function SetupDualsenseWs(self: ModuleInstance): void {
@@ -47,7 +59,7 @@ export function SetupDualsenseWs(self: ModuleInstance): void {
 					code: 401,
 					type: 'error',
 					message: 'Invalid token',
-				}),
+				} as OutgoingMessage),
 			)
 			ws.close()
 		}
@@ -61,15 +73,47 @@ export function SetupDualsenseWs(self: ModuleInstance): void {
 		)
 
 		ws.on('message', (data: any) => {
-			const obj: Message = JSON.parse(data.toString())
+			const obj: IncomingMessage = JSON.parse(data.toString())
 
-			if (obj.type === 'buttonPress') {
-				logger.info(`Received event: ${obj.message}`)
+			if (obj.type === 'button') {
+				logger.info(`Received event: ${obj.data?.button}`)
 
 				self.setVariableValues({
-					[ModuleVariable.PressedKey]: obj.message,
+					[ModuleVariable.PressedKey]: obj.data?.button,
 					[ModuleVariable.LastPressedOn]: Date.now(),
 				})
+
+				switch (obj.data?.button) {
+					case 'l2': {
+						return self.setVariableValues({
+							[ModuleVariable.L2Pos]: obj.data.x,
+						})
+					}
+					case 'r2': {
+						return self.setVariableValues({
+							[ModuleVariable.R2Pos]: obj.data.x,
+						})
+					}
+					case 'touchpad': {
+						return self.setVariableValues({
+							[ModuleVariable.TouchpadXPos]: obj.data.x,
+							[ModuleVariable.TouchpadYPos]: obj.data.y,
+							[ModuleVariable.TouchpadDirection]: obj.data.direction,
+						})
+					}
+					case 'l3': {
+						return self.setVariableValues({
+							[ModuleVariable.L3Pos]: obj.data.x,
+							[ModuleVariable.L3Direction]: obj.data.direction,
+						})
+					}
+					case 'r3': {
+						return self.setVariableValues({
+							[ModuleVariable.R3Pos]: obj.data.x,
+							[ModuleVariable.R3Direction]: obj.data.direction,
+						})
+					}
+				}
 			} else if (obj.type === 'message') {
 				logger.info(`Received message: ${obj.message}`)
 			} else if (obj.type === 'error') {

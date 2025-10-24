@@ -1,6 +1,7 @@
 import { DualsenseButton, DualsenseButtons } from "./buttons.js";
 import { logger } from "./logger.js";
 import { Dualsense } from "dualsense-ts";
+import throttle from "lodash.throttle";
 import { WebSocket } from "ws";
 
 export interface IncomingMessage {
@@ -11,8 +12,14 @@ export interface IncomingMessage {
 
 export interface OutgoingMessage {
   code: number;
-  type: "error" | "message" | "buttonPress";
-  message: string;
+  type: "error" | "message" | "button";
+  message?: string;
+  data?: {
+    button: DualsenseButton;
+    x?: number;
+    y?: number;
+    direction?: number;
+  };
 }
 
 export class DualsenseBridge {
@@ -83,47 +90,83 @@ export class DualsenseBridge {
     });
 
     for (const mainButton of Object.values(DualsenseButtons.Main) as DualsenseButton[]) {
-      (this.dualsense as any)[mainButton].on("press", () => this.handleButtonPress(mainButton));
+      (this.dualsense as any)[mainButton].on("press", () => this.handleButtonEvent(mainButton));
     }
 
     for (const dpadButton of Object.values(DualsenseButtons.DPad) as DualsenseButton[]) {
       const direction = dpadButton.split("_")[1];
-      (this.dualsense.dpad as any)[direction].on("press", () => this.handleButtonPress(dpadButton));
+      (this.dualsense.dpad as any)[direction].on("press", () => this.handleButtonEvent(dpadButton));
     }
 
     for (const systemButton of Object.values(DualsenseButtons.System) as DualsenseButton[]) {
-      (this.dualsense as any)[systemButton].on("press", () => this.handleButtonPress(systemButton));
+      (this.dualsense as any)[systemButton].on("press", () => this.handleButtonEvent(systemButton));
     }
 
     for (const side of ["left", "right"]) {
-      (this.dualsense as any)[side].bumper.on("press", () => this.handleButtonPress(
+      (this.dualsense as any)[side].bumper.on("press", () => this.handleButtonEvent(
         side === "left"
           ? DualsenseButtons.Triggers.L1
           : DualsenseButtons.Triggers.R1,
       ));
 
-      (this.dualsense as any)[side].trigger.on("press", () => this.handleButtonPress(
+      (this.dualsense as any)[side].trigger.on("change", (obj: any) => this.handleButtonEventWithThrottling(
         side === "left"
           ? DualsenseButtons.Triggers.L2
           : DualsenseButtons.Triggers.R2,
+        { x: obj.state },
       ));
 
-      // this.dualsense.left.analog.on("press", () => console.log("l3"));
+      (this.dualsense as any)[side].analog.on("change", (obj: any, x: any) => this.handleButtonEventWithThrottling(
+        side === "left"
+          ? DualsenseButtons.Sticks.L3
+          : DualsenseButtons.Sticks.R3,
+        { x: x.state, direction: obj.direction },
+      ));
     }
+
+    this.dualsense.touchpad.on("change", (touchpad) => {
+      this.handleButtonEventWithThrottling(
+        DualsenseButtons.System.Touchpad,
+        {
+          x: touchpad.left.x.state,
+          y: touchpad.left.y.state,
+          direction: touchpad.left.direction,
+        },
+      );
+    });
   }
 
-  private handleButtonPress(button: DualsenseButton): void {
+  private handleButtonEvent(
+    button: DualsenseButton,
+    options?: {
+      x?: number;
+      y?: number;
+      direction?: number;
+    },
+  ): void {
     logger.info(`Pressed: ${button}`);
     if (this.ws.readyState === WebSocket.OPEN) {
-      this.sendMessage({
+      const payload: OutgoingMessage = {
         code: 200,
-        type: "buttonPress",
-        message: button,
-      });
+        type: "button",
+        data: {
+          button,
+          x: options?.x,
+          y: options?.y,
+          direction: options?.direction,
+        },
+      };
+      this.sendMessage(payload);
     } else {
       logger.warn("WebSocket connection is closed");
     }
   }
+
+  private handleButtonEventWithThrottling = throttle(
+    this.handleButtonEvent,
+    30,
+    { leading: true, trailing: true },
+  );
 
   private sendMessage(message: OutgoingMessage): void {
     this.ws.send(JSON.stringify(message));

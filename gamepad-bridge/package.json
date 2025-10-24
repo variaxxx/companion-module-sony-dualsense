@@ -14,12 +14,14 @@
   },
   "dependencies": {
     "dualsense-ts": "^5.5.0",
+    "lodash.throttle": "^4.1.1",
     "tsx": "^4.20.6",
     "winston": "^3.18.3",
     "ws": "^8.18.3"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.0.0",
+    "@types/lodash.throttle": "^4.1.9",
     "@types/node": "^24.8.1",
     "@types/ws": "^8.18.1",
     "eslint": "^9.38.0",
